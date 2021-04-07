@@ -4,7 +4,15 @@ import { createError } from '../helpers/error'
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
-    const { url, method = 'get', data = null, headers, responseType, timeout } = config
+    const {
+      url,
+      method = 'get',
+      data = null,
+      headers,
+      responseType,
+      timeout,
+      cancelToken
+    } = config
 
     const request = new XMLHttpRequest()
 
@@ -63,6 +71,14 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
         'ECONNABORTED',
         request
       ))
+    }
+
+    // 取消请求
+    if(cancelToken) {
+      cancelToken.promise.then(reason => {
+        request.abort()
+        reject(reason)
+      })
     }
 
     Object.keys(headers).forEach(name => {
