@@ -74,6 +74,12 @@ router.get('/interceptor/get', (req, res) => {
   res.send('hello')
 })
 
+router.get('/cancel/get', (req, res) => {
+  setTimeout(() => {
+    res.send('test cancel token')
+  }, 2000);
+})
+
 app.use(router)
 
 const port = process.env.PORT || 3000
