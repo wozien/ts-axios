@@ -1,5 +1,10 @@
 import { isDate, isPlainObject } from './utils'
 
+interface URLOrign {
+  protocol: string
+  host: string
+}
+
 // 对于字符 @、:、$、,、、[、]，我们是允许出现在 url 中的，不希望被 encode。
 function encode(val: string): string {
   return encodeURIComponent(val)
@@ -54,4 +59,22 @@ export function buildURL(url: string, params?: any) {
   }
 
   return url
+}
+
+const urlParsingNode = document.createElement('a')
+const currentOrigin = resovleURL(window.location.href)
+
+function resovleURL(url: string): URLOrign {
+  urlParsingNode.setAttribute('herf', url)
+  const { protocol, host } = urlParsingNode
+
+  return {
+    protocol,
+    host
+  }
+}
+
+export function isURLSameOrigin(requestURL: string): boolean {
+  const parseOrigin = resovleURL(requestURL)
+  return parseOrigin.protocol === currentOrigin.protocol && parseOrigin.host === currentOrigin.host
 }
