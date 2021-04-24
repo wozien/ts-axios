@@ -11,7 +11,8 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       headers,
       responseType,
       timeout,
-      cancelToken
+      cancelToken,
+      withCredentials
     } = config
 
     const request = new XMLHttpRequest()
@@ -19,7 +20,7 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
     if (responseType) {
       request.responseType = responseType
     }
-    if(timeout) {
+    if (timeout) {
       request.timeout = timeout
     }
 
@@ -40,45 +41,42 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
         request
       }
 
-      if(response.status >= 200 && response.status < 300) {
+      if (response.status >= 200 && response.status < 300) {
         resolve(response)
       } else {
-        reject(createError(
-          `Request failed with status code ${response.status}`,
-          config,
-          null,
-          request,
-          response
-        ))
+        reject(
+          createError(
+            `Request failed with status code ${response.status}`,
+            config,
+            null,
+            request,
+            response
+          )
+        )
       }
     }
 
     // 网络异常
     request.onerror = () => {
-      reject(createError(
-        'Network Error',
-        config,
-        null,
-        request
-      ))
+      reject(createError('Network Error', config, null, request))
     }
 
     // 网络超时
     request.ontimeout = () => {
-      reject(createError(
-        `Timeout of ${timeout} ms exceeded`,
-        config,
-        'ECONNABORTED',
-        request
-      ))
+      reject(createError(`Timeout of ${timeout} ms exceeded`, config, 'ECONNABORTED', request))
     }
 
     // 取消请求
-    if(cancelToken) {
+    if (cancelToken) {
       cancelToken.promise.then(reason => {
         request.abort()
         reject(reason)
       })
+    }
+
+    if (withCredentials) {
+      console.log('aaa')
+      request.withCredentials = true
     }
 
     Object.keys(headers).forEach(name => {

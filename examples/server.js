@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const cookieParser = require('cookie-parser')
 const webpack = require('webpack')
 const webpackDevMiddleware = require('webpack-dev-middleware')
 const webpackHotMiddleware = require('webpack-hot-middleware')
@@ -23,6 +24,7 @@ app.use(express.static(__dirname))
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+app.use(cookieParser())
 
 router.get('/simple/get', (req, res) => {
   res.json({
@@ -78,6 +80,10 @@ router.get('/cancel/get', (req, res) => {
   setTimeout(() => {
     res.send('test cancel token')
   }, 2000);
+})
+
+router.get('/more/get', (req, res) => {
+  res.json(req.cookies)
 })
 
 app.use(router)
