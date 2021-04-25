@@ -1,8 +1,9 @@
 import { AxiosRequestConfig, AxiosPromise, AxiosResponse } from '../types'
-import { parseHeaders } from '../helpers/headers'
+import { parseHeaders, processHeaders } from '../helpers/headers'
 import { createError } from '../helpers/error'
 import { isURLSameOrigin } from '../helpers/url'
 import cookie from '../helpers/cookie'
+import { isFormData } from '../helpers/utils'
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
@@ -16,35 +17,105 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
       cancelToken,
       withCredentials,
       xsrfCookieName,
-      xsrfHeaderName
+      xsrfHeaderName,
+      onDownloaProgress,
+      onUploadProgress
     } = config
 
     const request = new XMLHttpRequest()
 
-    if (responseType) {
-      request.responseType = responseType
-    }
-    if (timeout) {
-      request.timeout = timeout
-    }
-
     request.open(method.toUpperCase(), url!, true)
 
-    request.onreadystatechange = () => {
-      if (request.readyState !== 4 || request.status === 0) return
+    configureRequest()
+    addEvents()
+    processHeaders()
+    processCancel()
 
-      const responseHeaders = parseHeaders(request.getAllResponseHeaders())
-      const responseData =
-        responseType && responseType !== 'text' ? request.response : request.responseText
-      const response: AxiosResponse = {
-        data: responseData,
-        status: request.status,
-        statusText: request.statusText,
-        headers: responseHeaders,
-        config,
-        request
+    request.send(data)
+
+    function configureRequest(): void {
+      if (responseType) {
+        request.responseType = responseType
+      }
+      if (timeout) {
+        request.timeout = timeout
+      }
+      if (withCredentials) {
+        request.withCredentials = withCredentials
+      }
+    }
+
+    function addEvents(): void {
+      request.onreadystatechange = () => {
+        if (request.readyState !== 4 || request.status === 0) return
+
+        const responseHeaders = parseHeaders(request.getAllResponseHeaders())
+        const responseData =
+          responseType && responseType !== 'text' ? request.response : request.responseText
+        const response: AxiosResponse = {
+          data: responseData,
+          status: request.status,
+          statusText: request.statusText,
+          headers: responseHeaders,
+          config,
+          request
+        }
+
+        handleResponse(response)
       }
 
+      // 网络异常
+      request.onerror = () => {
+        reject(createError('Network Error', config, null, request))
+      }
+
+      // 网络超时
+      request.ontimeout = () => {
+        reject(createError(`Timeout of ${timeout} ms exceeded`, config, 'ECONNABORTED', request))
+      }
+
+      if (onDownloaProgress) {
+        request.onprogress = onDownloaProgress
+      }
+
+      if (onUploadProgress) {
+        request.upload.onprogress = onUploadProgress
+      }
+    }
+
+    function processHeaders(): void {
+      if (isFormData(headers)) {
+        delete headers['Content-Type']
+      }
+
+      if ((withCredentials || isURLSameOrigin(url!)) && xsrfCookieName) {
+        const xsrfValue = cookie.read(xsrfCookieName)
+        if (xsrfValue) {
+          headers[xsrfHeaderName!] = xsrfValue
+        }
+      }
+
+      Object.keys(headers).forEach(name => {
+        // 当我们传入的 data 为空的时候，请求 header 配置 Content-Type 是没有意义的
+        if (data === null && name.toLowerCase() === 'content-type') {
+          delete headers[name]
+        } else {
+          request.setRequestHeader(name, headers[name])
+        }
+      })
+    }
+
+    function processCancel(): void {
+      // 取消请求
+      if (cancelToken) {
+        cancelToken.promise.then(reason => {
+          request.abort()
+          reject(reason)
+        })
+      }
+    }
+
+    function handleResponse(response: AxiosResponse): void {
       if (response.status >= 200 && response.status < 300) {
         resolve(response)
       } else {
@@ -59,45 +130,5 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
         )
       }
     }
-
-    // 网络异常
-    request.onerror = () => {
-      reject(createError('Network Error', config, null, request))
-    }
-
-    // 网络超时
-    request.ontimeout = () => {
-      reject(createError(`Timeout of ${timeout} ms exceeded`, config, 'ECONNABORTED', request))
-    }
-
-    // 取消请求
-    if (cancelToken) {
-      cancelToken.promise.then(reason => {
-        request.abort()
-        reject(reason)
-      })
-    }
-
-    if (withCredentials) {
-      request.withCredentials = true
-    }
-
-    if ((withCredentials || isURLSameOrigin(url!)) && xsrfCookieName) {
-      const xsrfValue = cookie.read(xsrfCookieName)
-      if (xsrfValue) {
-        headers[xsrfHeaderName!] = xsrfValue
-      }
-    }
-
-    Object.keys(headers).forEach(name => {
-      // 当我们传入的 data 为空的时候，请求 header 配置 Content-Type 是没有意义的
-      if (data === null && name.toLowerCase() === 'content-type') {
-        delete headers[name]
-      } else {
-        request.setRequestHeader(name, headers[name])
-      }
-    })
-
-    request.send(data)
   })
 }
