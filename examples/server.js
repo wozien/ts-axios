@@ -5,6 +5,7 @@ const webpack = require('webpack')
 const webpackDevMiddleware = require('webpack-dev-middleware')
 const webpackHotMiddleware = require('webpack-hot-middleware')
 const WebpackConfig = require('./webpack.config')
+const atob = require('atob')
 
 const app = express()
 const router = express.Router()
@@ -88,6 +89,18 @@ router.get('/cancel/get', (req, res) => {
 
 router.get('/more/get', (req, res) => {
   res.send('more/get')
+})
+
+router.post('/more/post', function(req, res) {
+  const auth = req.headers.authorization
+  const [type, credentials] = auth.split(' ')
+  console.log(atob(credentials))
+  const [username, password] = atob(credentials).split(':')
+  if (type === 'Basic' && username === 'Yee' && password === '123456') {
+    res.json(req.body)
+  } else {
+    res.end('UnAuthorization')
+  }
 })
 
 app.use(router)
