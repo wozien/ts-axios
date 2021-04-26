@@ -1,4 +1,4 @@
-import { isDate, isPlainObject } from './utils'
+import { isDate, isPlainObject, isURLSearchParams } from './utils'
 
 interface URLOrign {
   protocol: string
@@ -17,37 +17,42 @@ function encode(val: string): string {
     .replace(/%5D/gi, ']')
 }
 
-export function buildURL(url: string, params?: any) {
+export function buildURL(url: string, params?: any, paramsSerializer?: (params: any) => string) {
   if (!params) return url
 
-  const parts: string[] = []
-
-  Object.keys(params).forEach(key => {
-    let val = params[key]
-    if (val === null || typeof val === 'undefined') {
-      return
-    }
-
-    let values: string[]
-    if (Array.isArray(val)) {
-      // 参数值数组 ,  foo: ['bar', 'baz'] => foo[]=bar&foo[]=baz
-      values = val
-      key += '[]'
-    } else {
-      values = [val]
-    }
-
-    values.forEach(val => {
-      if (isDate(val)) {
-        val = val.toISOString()
-      } else if (isPlainObject(val)) {
-        val = JSON.stringify(val)
+  let serializedParams
+  if (paramsSerializer) {
+    serializedParams = paramsSerializer(params)
+  } else if (isURLSearchParams(params)) {
+    serializedParams = params.toString()
+  } else {
+    const parts: string[] = []
+    Object.keys(params).forEach(key => {
+      let val = params[key]
+      if (val === null || typeof val === 'undefined') {
+        return
       }
-      parts.push(`${encode(key)}=${encode(val)}`)
-    })
-  })
 
-  let serializedParams = parts.join('&')
+      let values: string[]
+      if (Array.isArray(val)) {
+        // 参数值数组 ,  foo: ['bar', 'baz'] => foo[]=bar&foo[]=baz
+        values = val
+        key += '[]'
+      } else {
+        values = [val]
+      }
+
+      values.forEach(val => {
+        if (isDate(val)) {
+          val = val.toISOString()
+        } else if (isPlainObject(val)) {
+          val = JSON.stringify(val)
+        }
+        parts.push(`${encode(key)}=${encode(val)}`)
+      })
+    })
+    serializedParams = parts.join('&')
+  }
 
   if (serializedParams) {
     // 丢弃 url 中的哈希标记
