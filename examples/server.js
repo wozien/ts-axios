@@ -103,6 +103,11 @@ router.post('/more/post', function(req, res) {
   }
 })
 
+router.get('/more/304', (req, res) => {
+  res.status(304)
+  res.end()
+})
+
 app.use(router)
 
 const port = process.env.PORT || 3000
