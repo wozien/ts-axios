@@ -17,6 +17,7 @@ export type Method =
 // 请求配置config 接口
 export interface AxiosRequestConfig {
   url?: string
+  baseURL?: string
   method?: Method
   data?: any
   params?: any

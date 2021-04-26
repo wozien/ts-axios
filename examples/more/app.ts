@@ -28,3 +28,8 @@ import axios from '../../src/index'
 //   console.log(res)
 // }).catch(e => console.log(e))
 
+const instance = axios.create({
+  baseURL: 'https://img.mukewang.com/'
+})
+
+instance.get('5cc01a7b0001a33718720632.jpg')
