@@ -77,8 +77,8 @@ export function buildURL(url: string, params?: any, paramsSerializer?: (params: 
 const urlParsingNode = document.createElement('a')
 const currentOrigin = resovleURL(window.location.href)
 
-function resovleURL(url: string): URLOrign {
-  urlParsingNode.setAttribute('herf', url)
+export function resovleURL(url: string): URLOrign {
+  urlParsingNode.setAttribute('href', url)
   const { protocol, host } = urlParsingNode
 
   return {
